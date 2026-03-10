@@ -58,12 +58,12 @@ export const mockKPIData = {
 
 // Revenue trend data for charts
 export const mockRevenueData = [
-  { month: 'Jul', revenue: 180000, orders: 890 },
-  { month: 'Aug', revenue: 195000, orders: 920 },
-  { month: 'Sep', revenue: 210000, orders: 1050 },
-  { month: 'Oct', revenue: 225000, orders: 1120 },
-  { month: 'Nov', revenue: 235000, orders: 1180 },
-  { month: 'Dec', revenue: 250000, orders: 1234 },
+  { id: 1, month: 'Jul', revenue: 180000, orders: 890 },
+  { id: 2, month: 'Aug', revenue: 195000, orders: 920 },
+  { id: 3, month: 'Sep', revenue: 210000, orders: 1050 },
+  { id: 4, month: 'Oct', revenue: 225000, orders: 1120 },
+  { id: 5, month: 'Nov', revenue: 235000, orders: 1180 },
+  { id: 6, month: 'Dec', revenue: 250000, orders: 1234 },
 ];
 
 // Commission data

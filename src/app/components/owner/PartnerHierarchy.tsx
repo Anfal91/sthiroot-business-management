@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Users, TrendingUp, Award, Building2, User, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, TrendingUp, Award, Building2, User, Search, ChevronLeft, ChevronRight as ChevronRightIcon, Filter } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { 
   mockPartnerHierarchy, 
   STORE_OWNER_IDS, 
@@ -549,6 +550,13 @@ export function PartnerHierarchy() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(STORE_OWNER_IDS));
   
+  // RP History filters
+  const [rpSearchQuery, setRpSearchQuery] = useState('');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [topPerformerFilter, setTopPerformerFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
   const selectedPartner = selectedPartnerId ? mockPartnerHierarchy[selectedPartnerId] : null;
   
   const handleFinalize = () => {
@@ -762,51 +770,337 @@ export function PartnerHierarchy() {
         
         <TabsContent value="history" className="space-y-4">
           <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">Monthly RP History - All Members</h3>
-              <div className="border rounded-lg overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted">
-                    <tr className="text-xs">
-                      <th className="text-left p-3">Name</th>
-                      <th className="text-left p-3">Month</th>
-                      <th className="text-right p-3">Self RP</th>
-                      <th className="text-right p-3">Team A</th>
-                      <th className="text-right p-3">Team B</th>
-                      <th className="text-right p-3">Matching</th>
-                      <th className="text-right p-3">Total RP</th>
-                      <th className="text-right p-3">Paid (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockRPHistory.map((record, idx) => {
+            <CardContent className="p-4 md:p-6">
+              <h3 className="font-semibold mb-4 text-lg">Monthly RP History - All Members</h3>
+              
+              {/* Filters */}
+              <div className="flex flex-col gap-4 mb-6">
+                {/* Row 1: Search and Month Filter */}
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or role..."
+                      value={rpSearchQuery}
+                      onChange={(e) => {
+                        setRpSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={monthFilter} onValueChange={(value) => {
+                    setMonthFilter(value);
+                    setCurrentPage(1);
+                  }}>
+                    <SelectTrigger className="w-full md:w-[200px]">
+                      <SelectValue placeholder="Filter by Month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Months</SelectItem>
+                      <SelectItem value="January 2026">January 2026</SelectItem>
+                      <SelectItem value="December 2025">December 2025</SelectItem>
+                      <SelectItem value="November 2025">November 2025</SelectItem>
+                      <SelectItem value="October 2025">October 2025</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={topPerformerFilter} onValueChange={(value) => {
+                    setTopPerformerFilter(value);
+                    setCurrentPage(1);
+                  }}>
+                    <SelectTrigger className="w-full md:w-[200px]">
+                      <SelectValue placeholder="Performance" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Members</SelectItem>
+                      <SelectItem value="top10">Top 10 Performers</SelectItem>
+                      <SelectItem value="top25">Top 25 Performers</SelectItem>
+                      <SelectItem value="above5000">Above 5K RP</SelectItem>
+                      <SelectItem value="above10000">Above 10K RP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Responsive Table */}
+              <div className="border rounded-lg overflow-hidden">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr className="text-xs">
+                        <th className="text-left p-3">Name</th>
+                        <th className="text-left p-3">Month</th>
+                        <th className="text-right p-3">Self RP</th>
+                        <th className="text-right p-3">Team A</th>
+                        <th className="text-right p-3">Team B</th>
+                        <th className="text-right p-3">Matching</th>
+                        <th className="text-right p-3">Total RP</th>
+                        <th className="text-right p-3">Paid (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        // Apply filters
+                        let filteredHistory = mockRPHistory.filter(record => {
+                          const partner = mockPartnerHierarchy[record.partnerId];
+                          if (!partner) return false;
+                          
+                          // Search filter
+                          const matchesSearch = rpSearchQuery === '' || 
+                            partner.name.toLowerCase().includes(rpSearchQuery.toLowerCase()) ||
+                            partner.role.toLowerCase().includes(rpSearchQuery.toLowerCase());
+                          
+                          // Month filter
+                          const monthYear = `${record.month} ${record.year}`;
+                          const matchesMonth = monthFilter === 'all' || monthYear === monthFilter;
+                          
+                          return matchesSearch && matchesMonth;
+                        });
+                        
+                        // Top performer filter (sort by totalRP first)
+                        filteredHistory = filteredHistory.sort((a, b) => b.totalRP - a.totalRP);
+                        
+                        if (topPerformerFilter === 'top10') {
+                          filteredHistory = filteredHistory.slice(0, 10);
+                        } else if (topPerformerFilter === 'top25') {
+                          filteredHistory = filteredHistory.slice(0, 25);
+                        } else if (topPerformerFilter === 'above5000') {
+                          filteredHistory = filteredHistory.filter(r => r.totalRP > 5000);
+                        } else if (topPerformerFilter === 'above10000') {
+                          filteredHistory = filteredHistory.filter(r => r.totalRP > 10000);
+                        }
+                        
+                        // Pagination
+                        const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
+                        const startIndex = (currentPage - 1) * itemsPerPage;
+                        const endIndex = startIndex + itemsPerPage;
+                        const paginatedHistory = filteredHistory.slice(startIndex, endIndex);
+                        
+                        if (paginatedHistory.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                                No records found matching your filters
+                              </td>
+                            </tr>
+                          );
+                        }
+                        
+                        return (
+                          <>
+                            {paginatedHistory.map((record, idx) => {
+                              const partner = mockPartnerHierarchy[record.partnerId];
+                              return (
+                                <tr key={idx} className="border-t hover:bg-muted/50 text-sm">
+                                  <td className="p-3">
+                                    <button
+                                      onClick={() => setSelectedPartnerId(record.partnerId)}
+                                      className="text-left hover:text-emerald-600 transition-colors"
+                                    >
+                                      <p className="font-medium">{partner?.name}</p>
+                                      <p className="text-xs text-muted-foreground">{partner?.role}</p>
+                                    </button>
+                                  </td>
+                                  <td className="p-3">{record.month} {record.year}</td>
+                                  <td className="text-right p-3">{record.selfRP.toLocaleString()}</td>
+                                  <td className="text-right p-3">{record.teamRPA.toLocaleString()}</td>
+                                  <td className="text-right p-3">{record.teamRPB.toLocaleString()}</td>
+                                  <td className="text-right p-3">{record.matchingRP.toLocaleString()}</td>
+                                  <td className="text-right p-3 font-semibold">{record.totalRP.toLocaleString()}</td>
+                                  <td className="text-right p-3 font-bold text-emerald-700">
+                                    ₹{record.payableAmount.toLocaleString()}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </>
+                        );
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y">
+                  {(() => {
+                    // Apply filters (same logic as desktop)
+                    let filteredHistory = mockRPHistory.filter(record => {
+                      const partner = mockPartnerHierarchy[record.partnerId];
+                      if (!partner) return false;
+                      
+                      const matchesSearch = rpSearchQuery === '' || 
+                        partner.name.toLowerCase().includes(rpSearchQuery.toLowerCase()) ||
+                        partner.role.toLowerCase().includes(rpSearchQuery.toLowerCase());
+                      
+                      const monthYear = `${record.month} ${record.year}`;
+                      const matchesMonth = monthFilter === 'all' || monthYear === monthFilter;
+                      
+                      return matchesSearch && matchesMonth;
+                    });
+                    
+                    filteredHistory = filteredHistory.sort((a, b) => b.totalRP - a.totalRP);
+                    
+                    if (topPerformerFilter === 'top10') {
+                      filteredHistory = filteredHistory.slice(0, 10);
+                    } else if (topPerformerFilter === 'top25') {
+                      filteredHistory = filteredHistory.slice(0, 25);
+                    } else if (topPerformerFilter === 'above5000') {
+                      filteredHistory = filteredHistory.filter(r => r.totalRP > 5000);
+                    } else if (topPerformerFilter === 'above10000') {
+                      filteredHistory = filteredHistory.filter(r => r.totalRP > 10000);
+                    }
+                    
+                    const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
+                    const startIndex = (currentPage - 1) * itemsPerPage;
+                    const endIndex = startIndex + itemsPerPage;
+                    const paginatedHistory = filteredHistory.slice(startIndex, endIndex);
+                    
+                    if (paginatedHistory.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-muted-foreground">
+                          No records found matching your filters
+                        </div>
+                      );
+                    }
+                    
+                    return paginatedHistory.map((record, idx) => {
                       const partner = mockPartnerHierarchy[record.partnerId];
                       return (
-                        <tr key={idx} className="border-t hover:bg-muted/50 text-sm">
-                          <td className="p-3">
+                        <div key={idx} className="p-4 space-y-3">
+                          <div className="flex items-center justify-between">
                             <button
                               onClick={() => setSelectedPartnerId(record.partnerId)}
                               className="text-left hover:text-emerald-600 transition-colors"
                             >
-                              <p className="font-medium">{partner?.name}</p>
+                              <p className="font-semibold">{partner?.name}</p>
                               <p className="text-xs text-muted-foreground">{partner?.role}</p>
                             </button>
-                          </td>
-                          <td className="p-3">{record.month} {record.year}</td>
-                          <td className="text-right p-3">{record.selfRP.toLocaleString()}</td>
-                          <td className="text-right p-3">{record.teamRPA.toLocaleString()}</td>
-                          <td className="text-right p-3">{record.teamRPB.toLocaleString()}</td>
-                          <td className="text-right p-3">{record.matchingRP.toLocaleString()}</td>
-                          <td className="text-right p-3 font-semibold">{record.totalRP.toLocaleString()}</td>
-                          <td className="text-right p-3 font-bold text-emerald-700">
-                            ₹{record.payableAmount.toLocaleString()}
-                          </td>
-                        </tr>
+                            <Badge variant="outline" className="text-xs">
+                              {record.month} {record.year}
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Self RP</p>
+                              <p className="font-medium">{record.selfRP.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Team A</p>
+                              <p className="font-medium">{record.teamRPA.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Team B</p>
+                              <p className="font-medium">{record.teamRPB.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Matching</p>
+                              <p className="font-medium">{record.matchingRP.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Total RP</p>
+                              <p className="font-semibold text-emerald-700">{record.totalRP.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Paid Amount</p>
+                              <p className="font-bold text-emerald-700">₹{record.payableAmount.toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
                       );
-                    })}
-                  </tbody>
-                </table>
+                    });
+                  })()}
+                </div>
               </div>
+              
+              {/* Pagination */}
+              {(() => {
+                // Calculate total pages based on current filters
+                let filteredHistory = mockRPHistory.filter(record => {
+                  const partner = mockPartnerHierarchy[record.partnerId];
+                  if (!partner) return false;
+                  
+                  const matchesSearch = rpSearchQuery === '' || 
+                    partner.name.toLowerCase().includes(rpSearchQuery.toLowerCase()) ||
+                    partner.role.toLowerCase().includes(rpSearchQuery.toLowerCase());
+                  
+                  const monthYear = `${record.month} ${record.year}`;
+                  const matchesMonth = monthFilter === 'all' || monthYear === monthFilter;
+                  
+                  return matchesSearch && matchesMonth;
+                });
+                
+                filteredHistory = filteredHistory.sort((a, b) => b.totalRP - a.totalRP);
+                
+                if (topPerformerFilter === 'top10') {
+                  filteredHistory = filteredHistory.slice(0, 10);
+                } else if (topPerformerFilter === 'top25') {
+                  filteredHistory = filteredHistory.slice(0, 25);
+                } else if (topPerformerFilter === 'above5000') {
+                  filteredHistory = filteredHistory.filter(r => r.totalRP > 5000);
+                } else if (topPerformerFilter === 'above10000') {
+                  filteredHistory = filteredHistory.filter(r => r.totalRP > 10000);
+                }
+                
+                const totalItems = filteredHistory.length;
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+                
+                if (totalItems === 0) return null;
+                
+                return (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} records
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+                          
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={currentPage === pageNum ? 'default' : 'outline'}
+                              size="sm"
+                              className="w-9 h-9 p-0"
+                              onClick={() => setCurrentPage(pageNum)}
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ChevronRightIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>

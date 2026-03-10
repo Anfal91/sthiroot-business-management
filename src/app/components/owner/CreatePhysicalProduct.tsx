@@ -11,8 +11,8 @@ interface PhysicalProductFormData {
   id: string;
   name: string;
   photos: File[];
-  type: 'Product' | 'Service' | 'Program' | '';
   productCode: string;
+  productUnit: string;
   category: string;
   subCategory: string;
   brandName: string;
@@ -30,6 +30,10 @@ interface PhysicalProductFormData {
   shelfLife: string;
   minOrderQuantity: string;
   orderMultiplyNumber: string; // Store-only: Orders must be in multiples of this value
+  height: string;
+  depth: string;
+  width: string;
+  weight: string;
   totalCost: string;
   mrp: string;
   pickupCentrePrice: string;
@@ -48,8 +52,8 @@ export function CreatePhysicalProduct({ onSuccess }: CreatePhysicalProductProps)
     id: `PRD-${Date.now()}`,
     name: '',
     photos: [],
-    type: '',
     productCode: '',
+    productUnit: '',
     category: '',
     subCategory: '',
     brandName: 'Meera Ayurveda',
@@ -67,6 +71,10 @@ export function CreatePhysicalProduct({ onSuccess }: CreatePhysicalProductProps)
     shelfLife: '',
     minOrderQuantity: '',
     orderMultiplyNumber: '',
+    height: '',
+    depth: '',
+    width: '',
+    weight: '',
     totalCost: '',
     mrp: '',
     pickupCentrePrice: '',
@@ -135,7 +143,7 @@ export function CreatePhysicalProduct({ onSuccess }: CreatePhysicalProductProps)
     e.preventDefault();
     
     // Validation
-    if (!formData.name || !formData.productCode || !formData.category || !formData.type || !formData.launchDate) {
+    if (!formData.name || !formData.productCode || !formData.category || !formData.launchDate) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -214,22 +222,8 @@ export function CreatePhysicalProduct({ onSuccess }: CreatePhysicalProductProps)
         )}
       </div>
 
-      {/* Type and Product Code */}
+      {/* Product Code and Unit */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="type">Type *</Label>
-          <Select value={formData.type} onValueChange={(value: any) => setFormData({ ...formData, type: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Product">Product</SelectItem>
-              <SelectItem value="Service">Service</SelectItem>
-              <SelectItem value="Program">Program</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="productCode">Product Code / SKU *</Label>
           <Input
@@ -238,6 +232,16 @@ export function CreatePhysicalProduct({ onSuccess }: CreatePhysicalProductProps)
             onChange={(e) => setFormData({ ...formData, productCode: e.target.value })}
             placeholder="e.g., WL-100"
             required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="productUnit">Product Unit</Label>
+          <Input
+            id="productUnit"
+            value={formData.productUnit}
+            onChange={(e) => setFormData({ ...formData, productUnit: e.target.value })}
+            placeholder="e.g., ml, g, kg"
           />
         </div>
       </div>
@@ -463,6 +467,58 @@ export function CreatePhysicalProduct({ onSuccess }: CreatePhysicalProductProps)
           onChange={(e) => setFormData({ ...formData, shelfLife: e.target.value })}
           placeholder="24"
         />
+      </div>
+
+      {/* Separator */}
+      <div className="border-t pt-4">
+        <h3 className="text-lg font-semibold text-blue-700 mb-4">Dimensions & Weight</h3>
+      </div>
+
+      {/* Dimensions and Weight */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="height">Height (cm)</Label>
+          <Input
+            id="height"
+            type="number"
+            value={formData.height}
+            onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+            placeholder="e.g., 10"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="depth">Depth (cm)</Label>
+          <Input
+            id="depth"
+            type="number"
+            value={formData.depth}
+            onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
+            placeholder="e.g., 5"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="width">Width (cm)</Label>
+          <Input
+            id="width"
+            type="number"
+            value={formData.width}
+            onChange={(e) => setFormData({ ...formData, width: e.target.value })}
+            placeholder="e.g., 10"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="weight">Weight (kg)</Label>
+          <Input
+            id="weight"
+            type="number"
+            value={formData.weight}
+            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+            placeholder="e.g., 0.5"
+          />
+        </div>
       </div>
 
       {/* Separator */}

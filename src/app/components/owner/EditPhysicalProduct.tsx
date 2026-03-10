@@ -15,6 +15,7 @@ interface PhysicalProduct {
   category: string;
   subCategory: string;
   brandName: string;
+  productUnit?: string;
   manufacturerName?: string;
   manufacturerLicense?: string;
   status: 'Active' | 'Inactive';
@@ -28,6 +29,10 @@ interface PhysicalProduct {
   ayushLicense?: string;
   shelfLife?: number;
   minOrderQuantity?: number;
+  height?: number;
+  depth?: number;
+  width?: number;
+  weight?: number;
   totalCost?: number;
   mrp: number;
   pc?: number;
@@ -47,8 +52,8 @@ export function EditPhysicalProduct({ product, onSuccess }: EditPhysicalProductP
     id: product.id,
     name: product.name,
     photos: [] as File[],
-    type: product.type,
     productCode: product.code,
+    productUnit: product.productUnit || '',
     category: product.category,
     subCategory: product.subCategory,
     brandName: product.brandName,
@@ -65,6 +70,10 @@ export function EditPhysicalProduct({ product, onSuccess }: EditPhysicalProductP
     ayushLicense: product.ayushLicense || '',
     shelfLife: String(product.shelfLife || ''),
     minOrderQuantity: String(product.minOrderQuantity || 1),
+    height: String(product.height || ''),
+    depth: String(product.depth || ''),
+    width: String(product.width || ''),
+    weight: String(product.weight || ''),
     totalCost: String(product.totalCost || ''),
     mrp: String(product.mrp),
     pickupCentrePrice: String(product.pc || ''),
@@ -135,7 +144,7 @@ export function EditPhysicalProduct({ product, onSuccess }: EditPhysicalProductP
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.productCode || !formData.category || !formData.type || !formData.launchDate) {
+    if (!formData.name || !formData.productCode || !formData.category || !formData.launchDate) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -214,22 +223,8 @@ export function EditPhysicalProduct({ product, onSuccess }: EditPhysicalProductP
         )}
       </div>
 
-      {/* Type and Product Code */}
+      {/* Product Code and Unit */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="type">Type *</Label>
-          <Select value={formData.type} onValueChange={(value: any) => setFormData({ ...formData, type: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Product">Product</SelectItem>
-              <SelectItem value="Service">Service</SelectItem>
-              <SelectItem value="Program">Program</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="productCode">Product Code / SKU *</Label>
           <Input
@@ -238,6 +233,16 @@ export function EditPhysicalProduct({ product, onSuccess }: EditPhysicalProductP
             onChange={(e) => setFormData({ ...formData, productCode: e.target.value })}
             placeholder="e.g., WL-100"
             required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="productUnit">Product Unit</Label>
+          <Input
+            id="productUnit"
+            value={formData.productUnit}
+            onChange={(e) => setFormData({ ...formData, productUnit: e.target.value })}
+            placeholder="e.g., ml, g, kg"
           />
         </div>
       </div>
@@ -448,6 +453,58 @@ export function EditPhysicalProduct({ product, onSuccess }: EditPhysicalProductP
           onChange={(e) => setFormData({ ...formData, shelfLife: e.target.value })}
           placeholder="24"
         />
+      </div>
+
+      {/* Separator */}
+      <div className="border-t pt-4">
+        <h3 className="text-lg font-semibold text-blue-700 mb-4">Dimensions & Weight</h3>
+      </div>
+
+      {/* Dimensions and Weight */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="height">Height (cm)</Label>
+          <Input
+            id="height"
+            type="number"
+            value={formData.height}
+            onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+            placeholder="e.g., 10"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="depth">Depth (cm)</Label>
+          <Input
+            id="depth"
+            type="number"
+            value={formData.depth}
+            onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
+            placeholder="e.g., 5"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="width">Width (cm)</Label>
+          <Input
+            id="width"
+            type="number"
+            value={formData.width}
+            onChange={(e) => setFormData({ ...formData, width: e.target.value })}
+            placeholder="e.g., 10"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="weight">Weight (kg)</Label>
+          <Input
+            id="weight"
+            type="number"
+            value={formData.weight}
+            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+            placeholder="e.g., 0.5"
+          />
+        </div>
       </div>
 
       {/* Separator */}

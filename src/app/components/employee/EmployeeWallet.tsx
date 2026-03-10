@@ -15,12 +15,32 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Wallet, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Upload, Eye, History, Smartphone, QrCode, Building2, Copy } from 'lucide-react';
+import { Calendar as CalendarComponent } from '../ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Wallet, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Upload, Eye, History, Smartphone, QrCode, Building2, Copy, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { mockWallets, mockWithdrawRequests, mockWalletTransactions, mockReportedTransactions, mockTopUpRequests } from '../../data/walletMockData';
 import { getActivePaymentMethods } from '../../../data/mockPaymentMethods';
 import { useAuth } from '../../contexts/AuthContext';
 import { copyToClipboard } from '../../utils/clipboard';
+import { 
+  format, 
+  startOfDay, 
+  endOfDay, 
+  subDays, 
+  startOfWeek, 
+  endOfWeek, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfYear, 
+  endOfYear,
+  subMonths,
+  subYears,
+  isWithinInterval,
+  parseISO
+} from 'date-fns';
+
+type DatePreset = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear' | 'custom';
 
 const EMPLOYEE_ID = 'EMP-001'; // Current logged-in employee
 
@@ -31,6 +51,13 @@ export function EmployeeWallet() {
   const [openReport, setOpenReport] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [reportingTransaction, setReportingTransaction] = useState<any>(null);
+  
+  // Date filter state for transaction history
+  const [dateRange, setDateRange] = useState<{ from: Date; to?: Date }>({
+    from: new Date('2020-01-01'),
+    to: new Date(),
+  });
+  const [selectedPreset, setSelectedPreset] = useState<DatePreset>('custom');
 
   // Top-Up Request Form (for Partner and Store only)
   const [topUpForm, setTopUpForm] = useState({
@@ -161,6 +188,48 @@ export function EmployeeWallet() {
       expectedAmount: '',
     });
   };
+
+  const handlePresetChange = (preset: DatePreset) => {
+    setSelectedPreset(preset);
+    switch (preset) {
+      case 'today':
+        setDateRange({ from: startOfDay(new Date()), to: endOfDay(new Date()) });
+        break;
+      case 'yesterday':
+        setDateRange({ from: startOfDay(subDays(new Date(), 1)), to: endOfDay(subDays(new Date(), 1)) });
+        break;
+      case 'thisWeek':
+        setDateRange({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) });
+        break;
+      case 'thisMonth':
+        setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
+        break;
+      case 'lastMonth':
+        setDateRange({ from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) });
+        break;
+      case 'thisYear':
+        setDateRange({ from: startOfYear(new Date()), to: endOfYear(new Date()) });
+        break;
+      case 'lastYear':
+        setDateRange({ from: startOfYear(subYears(new Date(), 1)), to: endOfYear(subYears(new Date(), 1)) });
+        break;
+      case 'custom':
+        setDateRange({ from: new Date('2020-01-01'), to: new Date() });
+        break;
+      default:
+        setDateRange({ from: new Date('2020-01-01'), to: new Date() });
+        break;
+    }
+  };
+
+  // Filter transactions by date range
+  const filteredTransactions = employeeTransactions.filter((transaction) => {
+    const transactionDate = new Date(transaction.transactionDate);
+    return isWithinInterval(transactionDate, {
+      start: dateRange.from,
+      end: dateRange.to || endOfDay(new Date()),
+    });
+  });
 
   return (
     <div className="space-y-6">
@@ -627,6 +696,97 @@ export function EmployeeWallet() {
               <CardDescription>All your wallet transactions</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Date Filter */}
+              <div className="mb-6 flex justify-end">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Calendar className="h-4 w-4" />
+                      {dateRange.from && format(dateRange.from, 'MMM dd')} - {dateRange.to && format(dateRange.to, 'MMM dd, yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <div className="flex flex-col md:flex-row">
+                      {/* Quick Date Presets */}
+                      <div className="border-b md:border-b-0 md:border-r p-3 space-y-1">
+                        <div className="text-sm font-medium text-muted-foreground mb-2 px-2">Quick Select</div>
+                        <div className="grid grid-cols-2 md:grid-cols-1 gap-1">
+                          <Button
+                            variant={selectedPreset === 'today' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start text-sm"
+                            onClick={() => handlePresetChange('today')}
+                          >
+                            Today
+                          </Button>
+                          <Button
+                            variant={selectedPreset === 'yesterday' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start text-sm"
+                            onClick={() => handlePresetChange('yesterday')}
+                          >
+                            Yesterday
+                          </Button>
+                          <Button
+                            variant={selectedPreset === 'thisWeek' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start text-sm"
+                            onClick={() => handlePresetChange('thisWeek')}
+                          >
+                            This Week
+                          </Button>
+                          <Button
+                            variant={selectedPreset === 'thisMonth' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start text-sm"
+                            onClick={() => handlePresetChange('thisMonth')}
+                          >
+                            This Month
+                          </Button>
+                          <Button
+                            variant={selectedPreset === 'lastMonth' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start text-sm"
+                            onClick={() => handlePresetChange('lastMonth')}
+                          >
+                            Last Month
+                          </Button>
+                          <Button
+                            variant={selectedPreset === 'thisYear' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start text-sm"
+                            onClick={() => handlePresetChange('thisYear')}
+                          >
+                            This Year
+                          </Button>
+                          <Button
+                            variant={selectedPreset === 'lastYear' ? 'default' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start text-sm"
+                            onClick={() => handlePresetChange('lastYear')}
+                          >
+                            Last Year
+                          </Button>
+                        </div>
+                      </div>
+                      {/* Calendar */}
+                      <div className="p-2 md:p-0">
+                        <CalendarComponent
+                          mode="range"
+                          selected={dateRange}
+                          onSelect={(range) => {
+                            if (range) {
+                              setDateRange(range);
+                              setSelectedPreset('custom');
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -641,7 +801,7 @@ export function EmployeeWallet() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employeeTransactions.map((transaction) => (
+                  {filteredTransactions.map((transaction) => (
                     <TableRow key={transaction.id}>
                       <TableCell className="font-mono text-xs">{transaction.transactionNumber}</TableCell>
                       <TableCell>

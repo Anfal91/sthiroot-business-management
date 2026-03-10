@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-export type UserRole = 'owner' | 'store-owner' | 'store-admin' | 'accountant' | 'employee' | 'manager' | 'courier-manager' | 'stock-manager' | 'customer-care' | 'dietitian' | 'agent' | 'partner';
+export type UserRole = 'owner' | 'store-owner' | 'store-admin' | 'accountant' | 'employee' | 'manager' | 'courier-manager' | 'stock-manager' | 'customer-care' | 'dietitian' | 'agent' | 'partner' | 'kyc-reviewer';
 
 interface User {
   id: string;
@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'rajesh@sthiroot.com': { role: 'partner', name: 'Rajesh Kumar' },
       'priya@sthiroot.com': { role: 'partner', name: 'Priya Sharma' },
       'agent@sthiroot.com': { role: 'agent', name: 'Agent' },
+      'kyc@sthiroot.com': { role: 'kyc-reviewer', name: 'KYC Reviewer' },
     };
 
     const userInfo = roleMap[email];

@@ -19,6 +19,7 @@ import { Commissions } from './components/owner/Commissions';
 import { Accounting } from './components/owner/Accounting';
 import { Offers } from './components/owner/Offers';
 import { PaymentMethods } from './components/owner/PaymentMethods';
+import { KYCVerification } from './components/owner/KYCVerification';
 
 // Shared components used by Owner
 import { StoreOrders as Orders } from './components/store/StoreOrders';
@@ -30,6 +31,7 @@ import { StoreCreateOrder as Tokens } from './components/store/StoreCreateOrder'
 // Store Owner components
 import { StoreDashboard } from './components/store/StoreDashboard';
 import { StoreOrders } from './components/store/StoreOrders';
+import { StorePurchaseOrders } from './components/store/StorePurchaseOrders';
 import { StoreCustomers } from './components/store/StoreCustomers';
 import { StoreStock } from './components/store/StoreStock';
 import { StoreEmployees } from './components/store/StoreEmployees';
@@ -42,16 +44,19 @@ import { MyOffers as StoreOwnerMyOffers } from './components/storeowner/MyOffers
 // Partner components
 import { PartnerDashboard } from './pages/partner/Dashboard';
 import { CreateOrder as PartnerCreateOrder } from './pages/partner/CreateOrder';
+import { PartnerOrders } from './pages/partner/Orders';
 import { PartnerPoints } from './pages/partner/Points';
 import { PartnerNetwork } from './pages/partner/Network';
 import { PartnerSponsored } from './pages/partner/Sponsored';
 import { MyOffers as PartnerMyOffers } from './components/partner/MyOffers';
 import { PartnerWallet } from './pages/partner/Wallet';
+import { PartnerSettings } from './components/partner/PartnerSettings';
 
 // Employee components
 import { EmployeeDashboard } from './components/employee/EmployeeDashboard';
 import { EmployeeWallet } from './components/employee/EmployeeWallet';
 import { EmployeeCreateOrder } from './pages/employee/CreateOrder';
+import { EmployeeSettings } from './components/employee/EmployeeSettings';
 
 // Accountant components
 import { AccountantWallet } from './components/accountant/AccountantWallet';
@@ -198,6 +203,18 @@ export default function App() {
             }
           />
 
+          {/* Protected KYC Reviewer Routes */}
+          <Route
+            path="/kyc-reviewer/verification"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <KYCVerification />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
           {/* Protected Store Owner Routes */}
           <Route
             path="/store/dashboard"
@@ -215,6 +232,16 @@ export default function App() {
               <ProtectedRoute>
                 <DashboardLayout>
                   <StoreOrders />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/store/purchase-orders"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <StorePurchaseOrders />
                 </DashboardLayout>
               </ProtectedRoute>
             }
@@ -332,6 +359,16 @@ export default function App() {
             }
           />
           <Route
+            path="/partner/orders"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <PartnerOrders />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/partner/points"
             element={
               <ProtectedRoute>
@@ -377,6 +414,16 @@ export default function App() {
               <ProtectedRoute>
                 <DashboardLayout>
                   <PartnerWallet />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/partner/settings"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <PartnerSettings />
                 </DashboardLayout>
               </ProtectedRoute>
             }
@@ -443,24 +490,34 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Protected Accountant Routes */}
           <Route
-            path="/accountant/wallet"
+            path="/employee/settings"
             element={
               <ProtectedRoute>
                 <DashboardLayout>
-                  <AccountantWallet />
+                  <EmployeeSettings />
                 </DashboardLayout>
               </ProtectedRoute>
             }
           />
+
+          {/* Protected Accountant Routes */}
           <Route
             path="/accountant/reports"
             element={
               <ProtectedRoute>
                 <DashboardLayout>
                   <AccountantReports />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/accountant/wallet"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <AccountantWallet />
                 </DashboardLayout>
               </ProtectedRoute>
             }

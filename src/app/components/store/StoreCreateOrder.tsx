@@ -63,7 +63,7 @@ export function StoreCreateOrder() {
   const [orderNotes, setOrderNotes] = useState('');
 
   const selectedPickupCenter = mockStoresWithCharges.find(store => store.id === selectedStoreId);
-  const activeStores = mockStoresWithCharges.filter(store => store.status === 'Active');
+  const activeStores = mockStoresWithCharges.filter(store => store.id === 'MAIN_OFFICE');
   const allProducts = [...mockProgramsCombos, ...mockProducts, ...mockDigitalCourses, ...mockEvents];
 
   const getFilteredProducts = () => {

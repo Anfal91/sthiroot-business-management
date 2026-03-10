@@ -25,6 +25,8 @@ export function Login() {
       navigate('/employee/dashboard');
     } else if (email === 'accountant@sthiroot.com') {
       navigate('/accountant/wallet');
+    } else if (email === 'kyc@sthiroot.com') {
+      navigate('/kyc-reviewer/verification');
     } else {
       navigate('/dashboard');
     }
@@ -88,6 +90,7 @@ export function Login() {
             <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
               <p className="text-xs text-emerald-800 mb-2 font-semibold">Demo Credentials:</p>
               <p className="text-xs text-emerald-600">Owner: owner@sthiroot.com</p>
+              <p className="text-xs text-emerald-600">KYC Reviewer: kyc@sthiroot.com</p>
               <p className="text-xs text-emerald-600">Accountant: accountant@sthiroot.com</p>
               <p className="text-xs text-emerald-600">Employee: employee@sthiroot.com</p>
               <p className="text-xs text-emerald-600">Store: store@sthiroot.com</p>

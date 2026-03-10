@@ -18,7 +18,9 @@ import {
   Phone,
   Mail,
   Calendar,
-  Award
+  Award,
+  X,
+  Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mockNetworkData, type PartnerNode } from '@/data/mockNetworkData';
@@ -395,9 +397,56 @@ function AddPartnerModal({ isOpen, onClose, currentPartner, network, preSelected
     placementParent: currentPartner.id,
     placementLeg: 'A' as 'A' | 'B',
     sponsorId: currentPartner.id,
+    password: '',
+    confirmPassword: '',
   });
 
   const [idSearchError, setIdSearchError] = useState('');
+  const [aadharFrontPhoto, setAadharFrontPhoto] = useState<File | null>(null);
+  const [aadharFrontPreview, setAadharFrontPreview] = useState<string>('');
+  const [aadharBackPhoto, setAadharBackPhoto] = useState<File | null>(null);
+  const [aadharBackPreview, setAadharBackPreview] = useState<string>('');
+  const [panCardPhoto, setPanCardPhoto] = useState<File | null>(null);
+  const [panCardPreview, setPanCardPreview] = useState<string>('');
+
+  const handleAadharFrontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAadharFrontPhoto(file);
+      setAadharFrontPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleAadharBackUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAadharBackPhoto(file);
+      setAadharBackPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handlePanCardUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPanCardPhoto(file);
+      setPanCardPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeAadharFront = () => {
+    setAadharFrontPhoto(null);
+    setAadharFrontPreview('');
+  };
+
+  const removeAadharBack = () => {
+    setAadharBackPhoto(null);
+    setAadharBackPreview('');
+  };
+
+  const removePanCard = () => {
+    setPanCardPhoto(null);
+    setPanCardPreview('');
+  };
 
   // Auto-fetch parent info when modal opens with preSelectedParent
   useEffect(() => {
@@ -426,8 +475,16 @@ function AddPartnerModal({ isOpen, onClose, currentPartner, network, preSelected
         placementParent: currentPartner.id,
         placementLeg: 'A',
         sponsorId: currentPartner.id,
+        password: '',
+        confirmPassword: '',
       });
       setIdSearchError('');
+      setAadharFrontPhoto(null);
+      setAadharFrontPreview('');
+      setAadharBackPhoto(null);
+      setAadharBackPreview('');
+      setPanCardPhoto(null);
+      setPanCardPreview('');
     }
   }, [isOpen, preSelectedParent, preSelectedLeg]);
 
@@ -482,6 +539,21 @@ function AddPartnerModal({ isOpen, onClose, currentPartner, network, preSelected
       return;
     }
 
+    if (!formData.password || !formData.confirmPassword) {
+      toast.error('Please enter password and confirm password');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
     if (formData.placementLeg === 'A' && legAOccupied) {
       toast.error('Leg A is already occupied. Please select Leg B or choose a different parent.');
       return;
@@ -505,8 +577,16 @@ function AddPartnerModal({ isOpen, onClose, currentPartner, network, preSelected
       placementParent: currentPartner.id,
       placementLeg: 'A',
       sponsorId: currentPartner.id,
+      password: '',
+      confirmPassword: '',
     });
     setIdSearchError('');
+    setAadharFrontPhoto(null);
+    setAadharFrontPreview('');
+    setAadharBackPhoto(null);
+    setAadharBackPreview('');
+    setPanCardPhoto(null);
+    setPanCardPreview('');
     
     onClose();
   };
@@ -568,6 +648,141 @@ function AddPartnerModal({ isOpen, onClose, currentPartner, network, preSelected
                   placeholder="+91 98765 43210"
                   required
                 />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Minimum 6 characters"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  placeholder="Re-enter password"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Document Photos Section */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-sm">Document Photos</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Aadhar Front Photo */}
+              <div className="space-y-2">
+                <Label>Aadhar Front Photo *</Label>
+                {aadharFrontPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={aadharFrontPreview} 
+                      alt="Aadhar Front" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeAadharFront}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="partner-aadhar-front"
+                      accept="image/*"
+                      onChange={handleAadharFrontUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="partner-aadhar-front" className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Upload Aadhar Front</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Aadhar Back Photo */}
+              <div className="space-y-2">
+                <Label>Aadhar Back Photo *</Label>
+                {aadharBackPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={aadharBackPreview} 
+                      alt="Aadhar Back" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeAadharBack}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="partner-aadhar-back"
+                      accept="image/*"
+                      onChange={handleAadharBackUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="partner-aadhar-back" className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Upload Aadhar Back</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* PAN Card Photo */}
+              <div className="space-y-2">
+                <Label>PAN Card Photo *</Label>
+                {panCardPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={panCardPreview} 
+                      alt="PAN Card" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePanCard}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="partner-pan-card"
+                      accept="image/*"
+                      onChange={handlePanCardUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="partner-pan-card" className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Upload PAN Card</span>
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
           </div>

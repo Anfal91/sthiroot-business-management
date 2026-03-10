@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Checkbox } from '../ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -101,12 +102,14 @@ interface StoreData {
   alternativePhoneNumber?: string;
   emailAddress: string;
   gstNumber?: string;
+  fssaiNumber?: string;
   ownerName: string;
   ownerContact: string;
-  ownerPan: string;
-  ownerAadhar: string;
-  aadharDocument?: File | string;
+  aadharFrontPhoto?: File | string;
+  aadharBackPhoto?: File | string;
   panDocument?: File | string;
+  storeOwnerPhoto?: File | string;
+  storeFrontPhoto?: File | string;
   status: 'Active' | 'Inactive';
   revenue: number;
   orders: number;
@@ -129,17 +132,22 @@ export function Stores() {
     storeState: '',
     storeCity: '',
     storeAddress: '',
+    pinCode: '',
     phoneNumber: '',
     alternativePhoneNumber: '',
     emailAddress: '',
     gstNumber: '',
-    storeDomain: '',
+    fssaiNumber: '',
+    storeDomain: [] as string[],
+    centerType: '',
+    securityDeposit: '',
     storeOwnerName: '',
     storeOwnerContact: '',
-    storeOwnerPan: '',
-    storeOwnerAadhar: '',
-    aadharDocument: null as File | null,
+    aadharFrontPhoto: null as File | null,
+    aadharBackPhoto: null as File | null,
     panDocument: null as File | null,
+    storeOwnerPhoto: null as File | null,
+    storeFrontPhoto: null as File | null,
     password: '',
     confirmPassword: '',
   });
@@ -158,10 +166,11 @@ export function Stores() {
       gstNumber: '27AAAAA0000A1Z5',
       ownerName: 'Store Owner',
       ownerContact: '9876543210',
-      ownerPan: 'ABCDE1234F',
-      ownerAadhar: '123456789012',
-      aadharDocument: 'mock-aadhar.pdf',
+      aadharFrontPhoto: 'mock-aadhar-front.pdf',
+      aadharBackPhoto: 'mock-aadhar-back.pdf',
       panDocument: 'mock-pan.pdf',
+      storeOwnerPhoto: 'mock-owner-photo.jpg',
+      storeFrontPhoto: 'mock-store-front.jpg',
       status: store.status as 'Active' | 'Inactive',
       revenue: store.revenue,
       orders: store.orders,
@@ -174,7 +183,7 @@ export function Stores() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileChange = (field: 'aadharDocument' | 'panDocument', file: File | null) => {
+  const handleFileChange = (field: 'aadharFrontPhoto' | 'aadharBackPhoto' | 'panDocument' | 'storeOwnerPhoto' | 'storeFrontPhoto', file: File | null) => {
     setFormData(prev => ({ ...prev, [field]: file }));
   };
 
@@ -212,6 +221,11 @@ export function Stores() {
     e.preventDefault();
     
     // Validation
+    if (formData.storeDomain.length === 0) {
+      toast.error('Please select at least one store category!');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match!');
       return;
@@ -229,16 +243,10 @@ export function Stores() {
       return;
     }
 
-    // PAN validation (basic format check)
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (formData.storeOwnerPan && !panRegex.test(formData.storeOwnerPan.toUpperCase())) {
-      toast.error('Invalid PAN Card format!');
-      return;
-    }
-
-    // Aadhar validation (12 digits)
-    if (formData.storeOwnerAadhar && !/^\d{12}$/.test(formData.storeOwnerAadhar)) {
-      toast.error('Invalid Aadhar Card number! Must be 12 digits.');
+    // FSSAI validation (basic format check)
+    const fssaiRegex = /^[0-9]{14}$/;
+    if (formData.fssaiNumber && !fssaiRegex.test(formData.fssaiNumber)) {
+      toast.error('Invalid FSSAI Number format!');
       return;
     }
 
@@ -266,13 +274,28 @@ export function Stores() {
     }
 
     // Document validation
-    if (!formData.aadharDocument) {
-      toast.error('Please upload Aadhar Card document!');
+    if (!formData.aadharFrontPhoto) {
+      toast.error('Please upload Aadhar Card front photo!');
+      return;
+    }
+
+    if (!formData.aadharBackPhoto) {
+      toast.error('Please upload Aadhar Card back photo!');
       return;
     }
 
     if (!formData.panDocument) {
       toast.error('Please upload PAN Card document!');
+      return;
+    }
+
+    if (!formData.storeOwnerPhoto) {
+      toast.error('Please upload Store Owner photo!');
+      return;
+    }
+
+    if (!formData.storeFrontPhoto) {
+      toast.error('Please upload Store Front photo!');
       return;
     }
 
@@ -286,17 +309,22 @@ export function Stores() {
       storeState: '',
       storeCity: '',
       storeAddress: '',
+      pinCode: '',
       phoneNumber: '',
       alternativePhoneNumber: '',
       emailAddress: '',
       gstNumber: '',
-      storeDomain: '',
+      fssaiNumber: '',
+      storeDomain: [] as string[],
+      centerType: '',
+      securityDeposit: '',
       storeOwnerName: '',
       storeOwnerContact: '',
-      storeOwnerPan: '',
-      storeOwnerAadhar: '',
-      aadharDocument: null,
+      aadharFrontPhoto: null,
+      aadharBackPhoto: null,
       panDocument: null,
+      storeOwnerPhoto: null,
+      storeFrontPhoto: null,
       password: '',
       confirmPassword: '',
     });
@@ -409,6 +437,19 @@ export function Stores() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="pinCode">Pin Code <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="pinCode"
+                      type="tel"
+                      placeholder="6-digit pin code"
+                      value={formData.pinCode}
+                      onChange={(e) => handleInputChange('pinCode', e.target.value)}
+                      maxLength={6}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="phoneNumber">Phone Number <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -457,18 +498,87 @@ export function Stores() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="storeDomain">Select Category <span className="text-red-500">*</span></Label>
-                    <Select value={formData.storeDomain} onValueChange={(value) => handleInputChange('storeDomain', value)} required>
-                      <SelectTrigger id="storeDomain">
-                        <SelectValue placeholder="Select store category" />
+                    <Label htmlFor="fssaiNumber">FSSAI Number</Label>
+                    <div className="relative">
+                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <Input
+                        id="fssaiNumber"
+                        placeholder="14-digit FSSAI number"
+                        className="pl-10"
+                        value={formData.fssaiNumber}
+                        onChange={(e) => handleInputChange('fssaiNumber', e.target.value)}
+                        maxLength={14}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 md:col-span-2">
+                    <Label>Select Categories <span className="text-red-500">*</span></Label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {['weightloss', 'skincare', 'sleephealth', 'sexualcare'].map((category) => (
+                        <div key={category} className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-gray-50">
+                          <Checkbox
+                            id={`category-${category}`}
+                            checked={formData.storeDomain.includes(category)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  storeDomain: [...prev.storeDomain, category]
+                                }));
+                              } else {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  storeDomain: prev.storeDomain.filter(c => c !== category)
+                                }));
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={`category-${category}`}
+                            className="text-sm font-medium leading-none cursor-pointer capitalize"
+                          >
+                            {category === 'weightloss' ? 'Weight Loss' :
+                             category === 'skincare' ? 'Skin Care' :
+                             category === 'sleephealth' ? 'Sleep Health' :
+                             'Sexual Care'}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    {formData.storeDomain.length > 0 && (
+                      <p className="text-xs text-emerald-600 flex items-center gap-1">
+                        <CheckCircle2 className="size-3" />
+                        {formData.storeDomain.length} {formData.storeDomain.length === 1 ? 'category' : 'categories'} selected
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="centerType">Center Type <span className="text-red-500">*</span></Label>
+                    <Select value={formData.centerType} onValueChange={(value) => handleInputChange('centerType', value)} required>
+                      <SelectTrigger id="centerType">
+                        <SelectValue placeholder="Select center type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="weightloss">Weight Loss</SelectItem>
-                        <SelectItem value="skincare">Skin Care</SelectItem>
-                        <SelectItem value="sleephealth">Sleep Health</SelectItem>
-                        <SelectItem value="sexualcare">Sexual Care</SelectItem>
+                        <SelectItem value="self">Self</SelectItem>
+                        <SelectItem value="home">Home</SelectItem>
+                        <SelectItem value="office">Office</SelectItem>
+                        <SelectItem value="hub">Hub</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="securityDeposit">Security Deposit <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="securityDeposit"
+                      type="number"
+                      placeholder="Amount in INR"
+                      value={formData.securityDeposit}
+                      onChange={(e) => handleInputChange('securityDeposit', e.target.value)}
+                      required
+                    />
                   </div>
                 </div>
               </div>
@@ -513,56 +623,43 @@ export function Stores() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="storeOwnerPan">Owner PAN Card <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                      <Input
-                        id="storeOwnerPan"
-                        placeholder="ABCDE1234F"
-                        className="pl-10 uppercase"
-                        value={formData.storeOwnerPan}
-                        onChange={(e) => handleInputChange('storeOwnerPan', e.target.value.toUpperCase())}
-                        maxLength={10}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="storeOwnerAadhar">Owner Aadhar Card <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                      <Input
-                        id="storeOwnerAadhar"
-                        type="tel"
-                        placeholder="12-digit Aadhar number"
-                        className="pl-10"
-                        value={formData.storeOwnerAadhar}
-                        onChange={(e) => handleInputChange('storeOwnerAadhar', e.target.value)}
-                        maxLength={12}
-                        required
-                      />
-                    </div>
-                  </div>
-
                   {/* Document Uploads */}
                   <div className="space-y-2">
-                    <Label htmlFor="aadharDocument">Upload Aadhar Card <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="aadharFrontPhoto">Upload Aadhar Card Front Photo <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Input
-                        id="aadharDocument"
+                        id="aadharFrontPhoto"
                         type="file"
                         accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => handleFileChange('aadharDocument', e.target.files?.[0] || null)}
+                        onChange={(e) => handleFileChange('aadharFrontPhoto', e.target.files?.[0] || null)}
                         className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
                         required
                       />
                     </div>
-                    {formData.aadharDocument && (
+                    {formData.aadharFrontPhoto && (
                       <p className="text-xs text-emerald-600 flex items-center gap-1">
                         <CheckCircle2 className="size-3" />
-                        {formData.aadharDocument.name}
+                        {formData.aadharFrontPhoto.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="aadharBackPhoto">Upload Aadhar Card Back Photo <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Input
+                        id="aadharBackPhoto"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleFileChange('aadharBackPhoto', e.target.files?.[0] || null)}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                        required
+                      />
+                    </div>
+                    {formData.aadharBackPhoto && (
+                      <p className="text-xs text-emerald-600 flex items-center gap-1">
+                        <CheckCircle2 className="size-3" />
+                        {formData.aadharBackPhoto.name}
                       </p>
                     )}
                   </div>
@@ -583,6 +680,46 @@ export function Stores() {
                       <p className="text-xs text-blue-600 flex items-center gap-1">
                         <CheckCircle2 className="size-3" />
                         {formData.panDocument.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="storeOwnerPhoto">Upload Store Owner Photo <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Input
+                        id="storeOwnerPhoto"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleFileChange('storeOwnerPhoto', e.target.files?.[0] || null)}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        required
+                      />
+                    </div>
+                    {formData.storeOwnerPhoto && (
+                      <p className="text-xs text-blue-600 flex items-center gap-1">
+                        <CheckCircle2 className="size-3" />
+                        {formData.storeOwnerPhoto.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="storeFrontPhoto">Upload Store Front Photo <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                      <Input
+                        id="storeFrontPhoto"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleFileChange('storeFrontPhoto', e.target.files?.[0] || null)}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        required
+                      />
+                    </div>
+                    {formData.storeFrontPhoto && (
+                      <p className="text-xs text-blue-600 flex items-center gap-1">
+                        <CheckCircle2 className="size-3" />
+                        {formData.storeFrontPhoto.name}
                       </p>
                     )}
                   </div>
@@ -888,6 +1025,16 @@ export function Stores() {
                       <p className="font-semibold text-base">{selectedStore.gstNumber}</p>
                     </div>
                   )}
+
+                  {selectedStore.fssaiNumber && (
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                        <CreditCard className="size-4" />
+                        FSSAI Number
+                      </Label>
+                      <p className="font-semibold text-base">{selectedStore.fssaiNumber}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -916,22 +1063,6 @@ export function Stores() {
                     </Label>
                     <p className="font-semibold text-base">{selectedStore.ownerContact}</p>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground font-medium flex items-center gap-2">
-                      <CreditCard className="size-4" />
-                      PAN Card Number
-                    </Label>
-                    <p className="font-semibold text-base">{selectedStore.ownerPan}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground font-medium flex items-center gap-2">
-                      <ShieldCheck className="size-4" />
-                      Aadhar Card Number
-                    </Label>
-                    <p className="font-semibold text-base">{selectedStore.ownerAadhar}</p>
-                  </div>
                 </div>
               </div>
 
@@ -945,38 +1076,6 @@ export function Stores() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 px-1">
-                  <div className="space-y-3">
-                    <Label className="text-sm text-muted-foreground font-medium flex items-center gap-2">
-                      <ShieldCheck className="size-4" />
-                      Aadhar Card Document
-                    </Label>
-                    <div className="p-4 bg-emerald-50 border-2 border-emerald-200 rounded-lg hover:border-emerald-300 transition-colors">
-                      <div className="flex items-start gap-3 mb-3">
-                        <FileText className="size-6 text-emerald-600 mt-1" />
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-emerald-900 mb-1">
-                            {typeof selectedStore.aadharDocument === 'string' 
-                              ? selectedStore.aadharDocument 
-                              : selectedStore.aadharDocument?.name || 'No document'}
-                          </p>
-                          <p className="text-xs text-emerald-700">PDF Document • Uploaded on {new Date(selectedStore.onboardedDate).toLocaleDateString('en-IN')}</p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                        onClick={() => {
-                          // In real app: open document in new tab/modal
-                          toast.success('Opening Aadhar Card document...');
-                          window.open('#', '_blank');
-                        }}
-                      >
-                        <Eye className="size-4 mr-2" />
-                        View Document
-                      </Button>
-                    </div>
-                  </div>
-
                   <div className="space-y-3">
                     <Label className="text-sm text-muted-foreground font-medium flex items-center gap-2">
                       <CreditCard className="size-4" />

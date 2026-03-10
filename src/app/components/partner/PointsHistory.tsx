@@ -4,6 +4,8 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Badge } from '@/app/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
+import { Calendar as CalendarComponent } from '@/app/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover';
 import { 
   TrendingUp, 
   Search, 
@@ -15,6 +17,24 @@ import {
   Calendar,
   Filter
 } from 'lucide-react';
+import { 
+  format, 
+  startOfDay, 
+  endOfDay, 
+  subDays, 
+  startOfWeek, 
+  endOfWeek, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfYear, 
+  endOfYear,
+  subMonths,
+  subYears,
+  isWithinInterval,
+  parseISO
+} from 'date-fns';
+
+type DatePreset = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear' | 'custom';
 
 interface Product {
   id: string;
@@ -266,7 +286,11 @@ interface PointsHistoryProps {
 export function PointsHistory({ partnerId }: PointsHistoryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [rpTypeFilter, setRPTypeFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<{ from: Date; to?: Date }>({
+    from: new Date('2020-01-01'),
+    to: new Date(),
+  });
+  const [selectedPreset, setSelectedPreset] = useState<DatePreset>('custom');
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
 
   const toggleOrderExpand = (orderId: string) => {
@@ -277,6 +301,39 @@ export function PointsHistory({ partnerId }: PointsHistoryProps) {
       newExpanded.add(orderId);
     }
     setExpandedOrders(newExpanded);
+  };
+
+  const handlePresetChange = (preset: DatePreset) => {
+    setSelectedPreset(preset);
+    switch (preset) {
+      case 'today':
+        setDateRange({ from: startOfDay(new Date()), to: endOfDay(new Date()) });
+        break;
+      case 'yesterday':
+        setDateRange({ from: startOfDay(subDays(new Date(), 1)), to: endOfDay(subDays(new Date(), 1)) });
+        break;
+      case 'thisWeek':
+        setDateRange({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) });
+        break;
+      case 'thisMonth':
+        setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
+        break;
+      case 'lastMonth':
+        setDateRange({ from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) });
+        break;
+      case 'thisYear':
+        setDateRange({ from: startOfYear(new Date()), to: endOfYear(new Date()) });
+        break;
+      case 'lastYear':
+        setDateRange({ from: startOfYear(subYears(new Date(), 1)), to: endOfYear(subYears(new Date(), 1)) });
+        break;
+      case 'custom':
+        setDateRange({ from: new Date('2020-01-01'), to: new Date() });
+        break;
+      default:
+        setDateRange({ from: new Date('2020-01-01'), to: new Date() });
+        break;
+    }
   };
 
   // Calculate summary statistics
@@ -311,27 +368,9 @@ export function PointsHistory({ partnerId }: PointsHistoryProps) {
     const matchesRPType = rpTypeFilter === 'all' || order.rpType === rpTypeFilter;
     
     let matchesDate = true;
-    if (dateFilter !== 'all') {
+    if (dateRange.from && dateRange.to) {
       const orderDate = new Date(order.date);
-      const now = new Date();
-      
-      switch (dateFilter) {
-        case 'this-month':
-          matchesDate = orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
-          break;
-        case 'last-month':
-          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
-          matchesDate = orderDate.getMonth() === lastMonth.getMonth() && orderDate.getFullYear() === lastMonth.getFullYear();
-          break;
-        case 'last-3-months':
-          const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3);
-          matchesDate = orderDate >= threeMonthsAgo;
-          break;
-        case 'last-6-months':
-          const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6);
-          matchesDate = orderDate >= sixMonthsAgo;
-          break;
-      }
+      matchesDate = isWithinInterval(orderDate, { start: dateRange.from, end: dateRange.to });
     }
     
     return matchesSearch && matchesRPType && matchesDate;
@@ -461,18 +500,93 @@ export function PointsHistory({ partnerId }: PointsHistoryProps) {
                 <SelectItem value="team_b">Team B RP</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Date Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="this-month">This Month</SelectItem>
-                <SelectItem value="last-month">Last Month</SelectItem>
-                <SelectItem value="last-3-months">Last 3 Months</SelectItem>
-                <SelectItem value="last-6-months">Last 6 Months</SelectItem>
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full md:w-auto gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {dateRange.from && format(dateRange.from, 'MMM dd')} - {dateRange.to && format(dateRange.to, 'MMM dd, yyyy')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <div className="flex flex-col md:flex-row">
+                  {/* Quick Date Presets */}
+                  <div className="border-b md:border-b-0 md:border-r p-3 space-y-1">
+                    <div className="text-sm font-medium text-muted-foreground mb-2 px-2">Quick Select</div>
+                    <div className="grid grid-cols-2 md:grid-cols-1 gap-1">
+                      <Button
+                        variant={selectedPreset === 'today' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-full justify-start text-sm"
+                        onClick={() => handlePresetChange('today')}
+                      >
+                        Today
+                      </Button>
+                      <Button
+                        variant={selectedPreset === 'yesterday' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-full justify-start text-sm"
+                        onClick={() => handlePresetChange('yesterday')}
+                      >
+                        Yesterday
+                      </Button>
+                      <Button
+                        variant={selectedPreset === 'thisWeek' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-full justify-start text-sm"
+                        onClick={() => handlePresetChange('thisWeek')}
+                      >
+                        This Week
+                      </Button>
+                      <Button
+                        variant={selectedPreset === 'thisMonth' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-full justify-start text-sm"
+                        onClick={() => handlePresetChange('thisMonth')}
+                      >
+                        This Month
+                      </Button>
+                      <Button
+                        variant={selectedPreset === 'lastMonth' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-full justify-start text-sm"
+                        onClick={() => handlePresetChange('lastMonth')}
+                      >
+                        Last Month
+                      </Button>
+                      <Button
+                        variant={selectedPreset === 'thisYear' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-full justify-start text-sm"
+                        onClick={() => handlePresetChange('thisYear')}
+                      >
+                        This Year
+                      </Button>
+                      <Button
+                        variant={selectedPreset === 'lastYear' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="w-full justify-start text-sm"
+                        onClick={() => handlePresetChange('lastYear')}
+                      >
+                        Last Year
+                      </Button>
+                    </div>
+                  </div>
+                  {/* Calendar */}
+                  <div className="p-2 md:p-0">
+                    <CalendarComponent
+                      mode="range"
+                      selected={dateRange}
+                      onSelect={(range) => {
+                        if (range) {
+                          setDateRange(range);
+                          setSelectedPreset('custom');
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Orders List with Expandable Product Details */}

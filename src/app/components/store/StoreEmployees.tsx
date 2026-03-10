@@ -4,6 +4,8 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Calendar } from '../ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import {
   Table,
   TableBody,
@@ -51,11 +53,29 @@ import {
   User,
   Briefcase,
   IndianRupee,
-  Calendar,
+  Calendar as CalendarIcon,
   Lock,
   Edit
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { 
+  format, 
+  startOfDay, 
+  endOfDay, 
+  subDays, 
+  startOfWeek, 
+  endOfWeek, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfYear, 
+  endOfYear,
+  subMonths,
+  subYears,
+  isWithinInterval,
+  parseISO
+} from 'date-fns';
+
+type DatePreset = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear' | 'custom';
 
 interface Employee {
   id: string;
@@ -88,6 +108,11 @@ export function StoreEmployees({ isBusinessOwner = false }: StoreEmployeesProps)
   const [isEditEmployeeOpen, setIsEditEmployeeOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<{ from: Date; to?: Date }>({
+    from: new Date('2020-01-01'),
+    to: new Date(),
+  });
+  const [selectedPreset, setSelectedPreset] = useState<DatePreset>('custom');
 
   // Mock employees data
   const [employees, setEmployees] = useState<Employee[]>([
@@ -220,14 +245,50 @@ export function StoreEmployees({ isBusinessOwner = false }: StoreEmployeesProps)
 
   const filteredEmployees = employees.filter((employee) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       employee.id.toLowerCase().includes(query) ||
       employee.name.toLowerCase().includes(query) ||
       employee.role.toLowerCase().includes(query) ||
       employee.phone.includes(query) ||
       employee.email.toLowerCase().includes(query)
     );
+    const employeeDate = parseISO(employee.joinDate);
+    const isWithinRange = isWithinInterval(employeeDate, {
+      start: dateRange.from,
+      end: dateRange.to || endOfDay(new Date()),
+    });
+    return matchesSearch && isWithinRange;
   });
+
+  const handlePresetChange = (preset: DatePreset) => {
+    setSelectedPreset(preset);
+    switch (preset) {
+      case 'today':
+        setDateRange({ from: startOfDay(new Date()), to: endOfDay(new Date()) });
+        break;
+      case 'yesterday':
+        setDateRange({ from: startOfDay(subDays(new Date(), 1)), to: endOfDay(subDays(new Date(), 1)) });
+        break;
+      case 'thisWeek':
+        setDateRange({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) });
+        break;
+      case 'thisMonth':
+        setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
+        break;
+      case 'lastMonth':
+        setDateRange({ from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) });
+        break;
+      case 'thisYear':
+        setDateRange({ from: startOfYear(new Date()), to: endOfYear(new Date()) });
+        break;
+      case 'lastYear':
+        setDateRange({ from: startOfYear(subYears(new Date(), 1)), to: endOfYear(subYears(new Date(), 1)) });
+        break;
+      default:
+        setDateRange({ from: new Date('2020-01-01'), to: new Date() });
+        break;
+    }
+  };
 
   const handleViewDetails = (employee: Employee) => {
     setSelectedEmployee(employee);
@@ -288,15 +349,104 @@ export function StoreEmployees({ isBusinessOwner = false }: StoreEmployeesProps)
       </div>
 
       <Card className="p-6">
-        {/* Search */}
-        <div className="mb-6 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by ID, Name, Role, Phone, or Email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by ID, Name, Role, Phone, or Email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                {format(dateRange.from, 'MMM dd, yyyy')} - {dateRange.to && format(dateRange.to, 'MMM dd, yyyy')}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="flex flex-col md:flex-row">
+                {/* Quick Date Presets */}
+                <div className="border-b md:border-b-0 md:border-r p-3 space-y-1">
+                  <div className="text-sm font-medium text-muted-foreground mb-2 px-2">Quick Select</div>
+                  <div className="grid grid-cols-2 md:grid-cols-1 gap-1">
+                    <Button
+                      variant={selectedPreset === 'today' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start text-sm"
+                      onClick={() => handlePresetChange('today')}
+                    >
+                      Today
+                    </Button>
+                    <Button
+                      variant={selectedPreset === 'yesterday' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start text-sm"
+                      onClick={() => handlePresetChange('yesterday')}
+                    >
+                      Yesterday
+                    </Button>
+                    <Button
+                      variant={selectedPreset === 'thisWeek' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start text-sm"
+                      onClick={() => handlePresetChange('thisWeek')}
+                    >
+                      This Week
+                    </Button>
+                    <Button
+                      variant={selectedPreset === 'thisMonth' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start text-sm"
+                      onClick={() => handlePresetChange('thisMonth')}
+                    >
+                      This Month
+                    </Button>
+                    <Button
+                      variant={selectedPreset === 'lastMonth' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start text-sm"
+                      onClick={() => handlePresetChange('lastMonth')}
+                    >
+                      Last Month
+                    </Button>
+                    <Button
+                      variant={selectedPreset === 'thisYear' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start text-sm"
+                      onClick={() => handlePresetChange('thisYear')}
+                    >
+                      This Year
+                    </Button>
+                    <Button
+                      variant={selectedPreset === 'lastYear' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start text-sm"
+                      onClick={() => handlePresetChange('lastYear')}
+                    >
+                      Last Year
+                    </Button>
+                  </div>
+                </div>
+                {/* Calendar */}
+                <div className="p-2 md:p-0">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(range) => {
+                      if (range) {
+                        setDateRange(range);
+                        setSelectedPreset('custom');
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Employees Table */}
@@ -447,6 +597,12 @@ function AddEmployeeDialog({ isOpen, onClose, onSuccess }: AddEmployeeDialogProp
   });
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [aadharFrontPhoto, setAadharFrontPhoto] = useState<File | null>(null);
+  const [aadharFrontPreview, setAadharFrontPreview] = useState<string>('');
+  const [aadharBackPhoto, setAadharBackPhoto] = useState<File | null>(null);
+  const [aadharBackPreview, setAadharBackPreview] = useState<string>('');
+  const [panCardPhoto, setPanCardPhoto] = useState<File | null>(null);
+  const [panCardPreview, setPanCardPreview] = useState<string>('');
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -456,9 +612,48 @@ function AddEmployeeDialog({ isOpen, onClose, onSuccess }: AddEmployeeDialogProp
     }
   };
 
+  const handleAadharFrontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAadharFrontPhoto(file);
+      setAadharFrontPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleAadharBackUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAadharBackPhoto(file);
+      setAadharBackPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handlePanCardUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPanCardPhoto(file);
+      setPanCardPreview(URL.createObjectURL(file));
+    }
+  };
+
   const removePhoto = () => {
     setPhoto(null);
     setPhotoPreview('');
+  };
+
+  const removeAadharFront = () => {
+    setAadharFrontPhoto(null);
+    setAadharFrontPreview('');
+  };
+
+  const removeAadharBack = () => {
+    setAadharBackPhoto(null);
+    setAadharBackPreview('');
+  };
+
+  const removePanCard = () => {
+    setPanCardPhoto(null);
+    setPanCardPreview('');
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -539,6 +734,12 @@ function AddEmployeeDialog({ isOpen, onClose, onSuccess }: AddEmployeeDialogProp
     });
     setPhoto(null);
     setPhotoPreview('');
+    setAadharFrontPhoto(null);
+    setAadharFrontPreview('');
+    setAadharBackPhoto(null);
+    setAadharBackPreview('');
+    setPanCardPhoto(null);
+    setPanCardPreview('');
   };
 
   return (
@@ -661,7 +862,7 @@ function AddEmployeeDialog({ isOpen, onClose, onSuccess }: AddEmployeeDialogProp
             <div className="space-y-2">
               <Label htmlFor="age">Age *</Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="age"
                   type="number"
@@ -735,42 +936,118 @@ function AddEmployeeDialog({ isOpen, onClose, onSuccess }: AddEmployeeDialogProp
             />
           </div>
 
+          {/* Document Photos Section */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-sm">Document Photos</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Aadhar Front Photo */}
+              <div className="space-y-2">
+                <Label>Aadhar Front Photo *</Label>
+                {aadharFrontPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={aadharFrontPreview} 
+                      alt="Aadhar Front" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeAadharFront}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="aadhar-front"
+                      accept="image/*"
+                      onChange={handleAadharFrontUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="aadhar-front" className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Upload Aadhar Front</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Aadhar Back Photo */}
+              <div className="space-y-2">
+                <Label>Aadhar Back Photo *</Label>
+                {aadharBackPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={aadharBackPreview} 
+                      alt="Aadhar Back" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeAadharBack}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="aadhar-back"
+                      accept="image/*"
+                      onChange={handleAadharBackUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="aadhar-back" className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Upload Aadhar Back</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* PAN Card Photo */}
+              <div className="space-y-2">
+                <Label>PAN Card Photo *</Label>
+                {panCardPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={panCardPreview} 
+                      alt="PAN Card" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePanCard}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="pan-card"
+                      accept="image/*"
+                      onChange={handlePanCardUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="pan-card" className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Upload PAN Card</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* PAN Card */}
-            <div className="space-y-2">
-              <Label htmlFor="panCard">PAN Card *</Label>
-              <div className="relative">
-                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  id="panCard"
-                  placeholder="ABCDE1234F"
-                  className="pl-10 uppercase"
-                  value={formData.panCard}
-                  onChange={(e) => handleInputChange('panCard', e.target.value.toUpperCase())}
-                  maxLength={10}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Aadhar Card */}
-            <div className="space-y-2">
-              <Label htmlFor="aadharCard">Aadhar Card *</Label>
-              <div className="relative">
-                <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  id="aadharCard"
-                  type="tel"
-                  placeholder="12-digit Aadhar number"
-                  className="pl-10"
-                  value={formData.aadharCard}
-                  onChange={(e) => handleInputChange('aadharCard', e.target.value)}
-                  maxLength={12}
-                  required
-                />
-              </div>
-            </div>
-
             {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password">Password *</Label>
@@ -840,8 +1117,6 @@ function EditEmployeeDialog({ isOpen, employee, onClose, onSuccess }: EditEmploy
     city: employee.city,
     state: employee.state,
     address: employee.address,
-    panCard: employee.panCard,
-    aadharCard: employee.aadharCard,
     age: employee.age.toString(),
     gender: employee.gender,
     password: '',
@@ -849,6 +1124,12 @@ function EditEmployeeDialog({ isOpen, employee, onClose, onSuccess }: EditEmploy
   });
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>(employee.photo || '');
+  const [aadharFront, setAadharFront] = useState<File | null>(null);
+  const [aadharFrontPreview, setAadharFrontPreview] = useState<string>('');
+  const [aadharBack, setAadharBack] = useState<File | null>(null);
+  const [aadharBackPreview, setAadharBackPreview] = useState<string>('');
+  const [panCard, setPanCard] = useState<File | null>(null);
+  const [panCardPreview, setPanCardPreview] = useState<string>('');
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -861,6 +1142,45 @@ function EditEmployeeDialog({ isOpen, employee, onClose, onSuccess }: EditEmploy
   const removePhoto = () => {
     setPhoto(null);
     setPhotoPreview('');
+  };
+
+  const handleAadharFrontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAadharFront(file);
+      setAadharFrontPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeAadharFront = () => {
+    setAadharFront(null);
+    setAadharFrontPreview('');
+  };
+
+  const handleAadharBackUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAadharBack(file);
+      setAadharBackPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeAadharBack = () => {
+    setAadharBack(null);
+    setAadharBackPreview('');
+  };
+
+  const handlePanCardUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPanCard(file);
+      setPanCardPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removePanCard = () => {
+    setPanCard(null);
+    setPanCardPreview('');
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -878,16 +1198,6 @@ function EditEmployeeDialog({ isOpen, employee, onClose, onSuccess }: EditEmploy
 
     if (formData.phone.length !== 10) {
       toast.error('Phone number must be 10 digits');
-      return;
-    }
-
-    if (formData.panCard && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panCard.toUpperCase())) {
-      toast.error('Invalid PAN Card format');
-      return;
-    }
-
-    if (formData.aadharCard && !/^\d{12}$/.test(formData.aadharCard)) {
-      toast.error('Aadhar Card must be 12 digits');
       return;
     }
 
@@ -913,8 +1223,8 @@ function EditEmployeeDialog({ isOpen, employee, onClose, onSuccess }: EditEmploy
       city: formData.city,
       state: formData.state,
       address: formData.address,
-      panCard: formData.panCard.toUpperCase(),
-      aadharCard: formData.aadharCard,
+      panCard: employee.panCard,
+      aadharCard: employee.aadharCard,
       age: parseInt(formData.age),
       gender: formData.gender,
       photo: photoPreview,
@@ -932,8 +1242,6 @@ function EditEmployeeDialog({ isOpen, employee, onClose, onSuccess }: EditEmploy
       city: '',
       state: '',
       address: '',
-      panCard: '',
-      aadharCard: '',
       age: '',
       gender: '',
       password: '',
@@ -941,6 +1249,12 @@ function EditEmployeeDialog({ isOpen, employee, onClose, onSuccess }: EditEmploy
     });
     setPhoto(null);
     setPhotoPreview('');
+    setAadharFront(null);
+    setAadharFrontPreview('');
+    setAadharBack(null);
+    setAadharBackPreview('');
+    setPanCard(null);
+    setPanCardPreview('');
   };
 
   return (
@@ -1063,7 +1377,7 @@ function EditEmployeeDialog({ isOpen, employee, onClose, onSuccess }: EditEmploy
             <div className="space-y-2">
               <Label htmlFor="age">Age *</Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="age"
                   type="number"
@@ -1137,42 +1451,118 @@ function EditEmployeeDialog({ isOpen, employee, onClose, onSuccess }: EditEmploy
             />
           </div>
 
+          {/* Document Photos Section */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-sm">Document Photos</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Aadhar Front Photo */}
+              <div className="space-y-2">
+                <Label>Aadhar Front Photo</Label>
+                {aadharFrontPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={aadharFrontPreview} 
+                      alt="Aadhar Front" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeAadharFront}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="aadhar-front-edit"
+                      accept="image/*"
+                      onChange={handleAadharFrontUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="aadhar-front-edit" className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Upload Aadhar Front</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Aadhar Back Photo */}
+              <div className="space-y-2">
+                <Label>Aadhar Back Photo</Label>
+                {aadharBackPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={aadharBackPreview} 
+                      alt="Aadhar Back" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeAadharBack}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="aadhar-back-edit"
+                      accept="image/*"
+                      onChange={handleAadharBackUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="aadhar-back-edit" className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Upload Aadhar Back</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* PAN Card Photo */}
+              <div className="space-y-2">
+                <Label>PAN Card Photo</Label>
+                {panCardPreview ? (
+                  <div className="relative border rounded-lg p-2">
+                    <img 
+                      src={panCardPreview} 
+                      alt="PAN Card" 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePanCard}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="pan-card-edit"
+                      accept="image/*"
+                      onChange={handlePanCardUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="pan-card-edit" className="flex flex-col items-center gap-2 cursor-pointer">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground text-center">Upload PAN Card</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* PAN Card */}
-            <div className="space-y-2">
-              <Label htmlFor="panCard">PAN Card *</Label>
-              <div className="relative">
-                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  id="panCard"
-                  placeholder="ABCDE1234F"
-                  className="pl-10 uppercase"
-                  value={formData.panCard}
-                  onChange={(e) => handleInputChange('panCard', e.target.value.toUpperCase())}
-                  maxLength={10}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Aadhar Card */}
-            <div className="space-y-2">
-              <Label htmlFor="aadharCard">Aadhar Card *</Label>
-              <div className="relative">
-                <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  id="aadharCard"
-                  type="tel"
-                  placeholder="12-digit Aadhar number"
-                  className="pl-10"
-                  value={formData.aadharCard}
-                  onChange={(e) => handleInputChange('aadharCard', e.target.value)}
-                  maxLength={12}
-                  required
-                />
-              </div>
-            </div>
-
             {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password">Password *</Label>

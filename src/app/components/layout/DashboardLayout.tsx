@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   Gift,
   CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
@@ -69,10 +70,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const partnerNavItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/partner/dashboard' },
     { icon: Plus, label: 'Create Order', path: '/partner/create-order' },
+    { icon: ShoppingCart, label: 'My Orders', path: '/partner/orders' },
     { icon: Coins, label: 'Points History', path: '/partner/points' },
     { icon: Network, label: 'My Network', path: '/partner/network' },
     { icon: Users, label: 'Sponsored Partners', path: '/partner/sponsored' },
     { icon: Tag, label: 'My Offers', path: '/partner/my-offers' },
+    { icon: Settings, label: 'Settings', path: '/partner/settings' },
   ];
 
   const storeOwnerNavItems = [
@@ -80,6 +83,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { icon: Wallet, label: 'My Wallet', path: '/store/wallet' },
     { icon: Plus, label: 'Create Order', path: '/store/create-order' },
     { icon: ShoppingCart, label: 'Orders', path: '/store/orders' },
+    { icon: Package, label: 'Purchase Orders', path: '/store/purchase-orders' },
     { icon: Users, label: 'Customers', path: '/store/customers' },
     { icon: Package, label: 'Stock', path: '/store/stock' },
     { icon: UserCog, label: 'Employees', path: '/store/employees' },
@@ -96,6 +100,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { icon: ShoppingCart, label: 'Orders', path: '/employee/orders' },
     { icon: Award, label: 'Points History', path: '/employee/points' },
     { icon: Tag, label: 'My Offers', path: '/employee/my-offers' },
+    { icon: Settings, label: 'Settings', path: '/employee/settings' },
   ];
 
   const accountantNavItems = [
@@ -106,11 +111,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { icon: BarChart3, label: 'Reports', path: '/accountant/reports', key: 'reports' },
   ];
 
+  const kycReviewerNavItems = [
+    { icon: ShieldCheck, label: 'KYC Verification', path: '/kyc-reviewer/verification' },
+  ];
+
   const navItems = 
     user?.role === 'owner' ? ownerNavItems : 
     user?.role === 'store-owner' ? storeOwnerNavItems : 
     user?.role === 'employee' ? employeeNavItems :
     user?.role === 'accountant' ? accountantNavItems :
+    user?.role === 'kyc-reviewer' ? kycReviewerNavItems :
     partnerNavItems;
 
   // Get wallet balance for roles that have wallets
@@ -176,6 +186,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     if (user?.role === 'store-owner') return 'Store Portal';
     if (user?.role === 'employee') return 'Employee Portal';
     if (user?.role === 'accountant') return 'Accountant Portal';
+    if (user?.role === 'kyc-reviewer') return 'KYC Reviewer Portal';
     return 'Partner Portal';
   };
 

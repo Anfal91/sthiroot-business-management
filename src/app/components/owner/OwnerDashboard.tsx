@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Calendar } from '../ui/calendar';
@@ -16,52 +16,140 @@ import {
   Calendar as CalendarIcon 
 } from 'lucide-react';
 import { mockKPIData, mockRevenueData } from '../../data/mockData';
-import { format } from 'date-fns';
+import { 
+  format, 
+  startOfDay, 
+  endOfDay, 
+  subDays, 
+  startOfWeek, 
+  endOfWeek, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfYear, 
+  endOfYear,
+  subMonths,
+  subYears,
+  isWithinInterval
+} from 'date-fns';
+
+type DatePreset = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear' | 'custom';
 
 export function OwnerDashboard() {
   const [dateRange, setDateRange] = useState<{ from: Date; to?: Date }>({
-    from: new Date(2025, 11, 1),
-    to: new Date(2026, 0, 12),
+    from: new Date('2020-01-01'),
+    to: new Date(),
   });
+  const [selectedPreset, setSelectedPreset] = useState<DatePreset>('custom');
+
+  // Memoize chart data to prevent unnecessary re-renders
+  const chartData = useMemo(() => mockRevenueData, []);
+
+  // Quick date range presets
+  const datePresets = [
+    { label: 'Today', value: 'today' as DatePreset },
+    { label: 'Yesterday', value: 'yesterday' as DatePreset },
+    { label: 'This Week', value: 'thisWeek' as DatePreset },
+    { label: 'This Month', value: 'thisMonth' as DatePreset },
+    { label: 'Last Month', value: 'lastMonth' as DatePreset },
+    { label: 'This Year', value: 'thisYear' as DatePreset },
+    { label: 'Last Year', value: 'lastYear' as DatePreset },
+  ];
+
+  // Function to get date range based on preset
+  const getDateRangeFromPreset = (preset: DatePreset): { from: Date; to: Date } => {
+    const today = new Date();
+    
+    switch (preset) {
+      case 'today':
+        return { from: startOfDay(today), to: endOfDay(today) };
+      case 'yesterday':
+        const yesterday = subDays(today, 1);
+        return { from: startOfDay(yesterday), to: endOfDay(yesterday) };
+      case 'thisWeek':
+        return { from: startOfWeek(today), to: endOfWeek(today) };
+      case 'thisMonth':
+        return { from: startOfMonth(today), to: endOfMonth(today) };
+      case 'lastMonth':
+        const lastMonth = subMonths(today, 1);
+        return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) };
+      case 'thisYear':
+        return { from: startOfYear(today), to: endOfYear(today) };
+      case 'lastYear':
+        const lastYear = subYears(today, 1);
+        return { from: startOfYear(lastYear), to: endOfYear(lastYear) };
+      default:
+        return { from: today, to: today };
+    }
+  };
+
+  // Handle preset selection
+  const handlePresetSelect = (preset: DatePreset) => {
+    const range = getDateRangeFromPreset(preset);
+    setDateRange(range);
+    setSelectedPreset(preset);
+  };
+
+  // Calculate filtered KPI data based on date range
+  const filteredKPIData = useMemo(() => {
+    // Simulate filtering based on date range
+    // In a real app, this would filter actual data based on the date range
+    const rangeDays = dateRange.to && dateRange.from 
+      ? Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))
+      : 1;
+
+    // Apply a multiplier based on the range to simulate different values
+    const multiplier = Math.min(rangeDays / 30, 1.5); // Scale based on days selected
+
+    return {
+      totalRevenue: Math.round(mockKPIData.totalRevenue * multiplier),
+      revenueGrowth: mockKPIData.revenueGrowth,
+      totalOrders: Math.round(mockKPIData.totalOrders * multiplier),
+      ordersGrowth: mockKPIData.ordersGrowth,
+      totalCustomers: Math.round(mockKPIData.totalCustomers * multiplier),
+      totalStores: mockKPIData.totalStores, // Stores don't change with date
+      totalEmployees: mockKPIData.totalEmployees, // Employees don't change with date
+      totalPartners: Math.round(mockKPIData.totalPartners * multiplier),
+    };
+  }, [dateRange]);
 
   const kpiCards = [
     {
       title: 'Total Revenue',
-      value: `₹${(mockKPIData.totalRevenue / 1000).toFixed(0)}K`,
-      change: `+${mockKPIData.revenueGrowth}%`,
+      value: `₹${(filteredKPIData.totalRevenue / 1000).toFixed(0)}K`,
+      change: `+${filteredKPIData.revenueGrowth}%`,
       positive: true,
       icon: DollarSign,
       color: 'emerald',
     },
     {
       title: 'Total Orders',
-      value: mockKPIData.totalOrders.toLocaleString(),
-      change: `+${mockKPIData.ordersGrowth}%`,
+      value: filteredKPIData.totalOrders.toLocaleString(),
+      change: `+${filteredKPIData.ordersGrowth}%`,
       positive: true,
       icon: ShoppingCart,
       color: 'blue',
     },
     {
       title: 'Total Customers',
-      value: mockKPIData.totalCustomers.toLocaleString(),
+      value: filteredKPIData.totalCustomers.toLocaleString(),
       icon: Users,
       color: 'purple',
     },
     {
       title: 'Active Stores',
-      value: mockKPIData.totalStores,
+      value: filteredKPIData.totalStores,
       icon: Store,
       color: 'orange',
     },
     {
       title: 'Total Employees',
-      value: mockKPIData.totalEmployees,
+      value: filteredKPIData.totalEmployees,
       icon: UserCog,
       color: 'pink',
     },
     {
       title: 'Total Partners',
-      value: mockKPIData.totalPartners.toLocaleString(),
+      value: filteredKPIData.totalPartners.toLocaleString(),
       icon: Network,
       color: 'teal',
     },
@@ -94,11 +182,38 @@ export function OwnerDashboard() {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={(range) => range && setDateRange(range)}
-            />
+            <div className="flex flex-col md:flex-row">
+              {/* Quick Date Presets */}
+              <div className="border-b md:border-b-0 md:border-r p-3 space-y-1">
+                <div className="text-sm font-medium text-muted-foreground mb-2 px-2">Quick Select</div>
+                <div className="grid grid-cols-2 md:grid-cols-1 gap-1">
+                  {datePresets.map((preset) => (
+                    <Button
+                      key={preset.value}
+                      variant={selectedPreset === preset.value ? 'default' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start text-sm"
+                      onClick={() => handlePresetSelect(preset.value)}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {/* Calendar */}
+              <div className="p-2 md:p-0">
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={(range) => {
+                    if (range) {
+                      setDateRange(range);
+                      setSelectedPreset('custom');
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </PopoverContent>
         </Popover>
       </div>
@@ -145,25 +260,49 @@ export function OwnerDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
+              <LineChart 
+                data={chartData} 
+                margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                id="revenue-line-chart"
+              >
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="#e5e7eb" 
+                  className="opacity-50"
+                  id="revenue-grid"
+                />
+                <XAxis 
+                  dataKey="month" 
+                  stroke="#6b7280"
+                  tick={{ fill: '#6b7280' }}
+                  tickLine={false}
+                  interval={0}
+                  id="revenue-x-axis"
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  tick={{ fill: '#6b7280' }}
+                  tickLine={false}
+                  id="revenue-y-axis"
+                />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'white', 
                     border: '1px solid #e5e7eb', 
                     borderRadius: '8px',
                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                  }} 
+                  }}
+                  id="revenue-tooltip"
                 />
                 <Line 
                   type="monotone" 
                   dataKey="revenue" 
                   stroke="#10b981" 
                   strokeWidth={3}
-                  dot={{ fill: '#10b981', r: 5 }}
-                  activeDot={{ r: 7 }}
+                  dot={false}
+                  activeDot={{ r: 6 }}
+                  isAnimationActive={false}
+                  id="revenue-line"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -178,29 +317,53 @@ export function OwnerDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
+              <BarChart 
+                data={chartData} 
+                margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                id="orders-bar-chart"
+              >
+                <defs>
+                  <linearGradient id="ordersBarGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#06b6d4" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#0891b2" stopOpacity={1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="#e5e7eb" 
+                  className="opacity-50"
+                  id="orders-grid"
+                />
+                <XAxis 
+                  dataKey="month" 
+                  stroke="#6b7280"
+                  tick={{ fill: '#6b7280' }}
+                  tickLine={false}
+                  interval={0}
+                  id="orders-x-axis"
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  tick={{ fill: '#6b7280' }}
+                  tickLine={false}
+                  id="orders-y-axis"
+                />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'white', 
                     border: '1px solid #e5e7eb', 
                     borderRadius: '8px',
                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                  }} 
+                  }}
+                  id="orders-tooltip"
                 />
                 <Bar 
                   dataKey="orders" 
-                  fill="url(#colorGradient)" 
+                  fill="url(#ordersBarGradient)" 
                   radius={[8, 8, 0, 0]}
+                  isAnimationActive={false}
+                  id="orders-bar"
                 />
-                <defs>
-                  <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#06b6d4" />
-                    <stop offset="100%" stopColor="#0891b2" />
-                  </linearGradient>
-                </defs>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
